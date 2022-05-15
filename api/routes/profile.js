@@ -1,6 +1,8 @@
 const express                       = require('express');
 const router                        = express.Router();
+const config                        = require('config');
 const auth                          = require('../middleware/auth');
+const { Octokit }                   = require("@octokit/core");
 const { check, validationResult }   = require('express-validator');
 
 const User      = require('../models/User');
@@ -316,6 +318,33 @@ router.delete('/education/:educ_id', auth, async (req, res) => {
         res.status(500).send('Server Error');
     }
 });
+
+// @route       GET api/profile/github/org
+// @desc        Get user repos from github
+// @access      Private
+
+router.get('/github/:username', async (req, res) => {
+    try {
+        const octokit = new Octokit({
+            auth: config.get('githubPersonalAccessToken')
+        })
+
+        const response = await octokit.request('GET /users/{username}/repos', {
+            username: req.params.username
+        });
+
+        if(response.error || response.status != 200) {
+            console.error(response.error);
+            return res.status(404).json({ msg: 'Not github profile found' });
+        }
+
+        return res.json(response.data);
+
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+})
 
 
 module.exports = router;
